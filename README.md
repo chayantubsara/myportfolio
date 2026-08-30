@@ -1,4 +1,4 @@
-# Chayon Tubsoro - Network Engineering Portfolio
+# Chayan Tubsara - Network Engineering Portfolio
 
 A deployable personal portfolio and CMS built with React, Vite, TypeScript, Google Apps Script, Google Sheets, and Google Drive.
 
