@@ -32,15 +32,6 @@ const PdfViewer = lazy(() =>
   })),
 );
 
-const navigation = [
-  'About',
-  'Experience',
-  'Projects',
-  'Certifications',
-  'Skills',
-  'Contact',
-];
-
 export function PublicPortfolio({ route }: { route: string }) {
   const [data, setData] = useState<PortfolioData>(fallbackData);
   const [isDark, setIsDark] = useState(
@@ -50,6 +41,7 @@ export function PublicPortfolio({ route }: { route: string }) {
         matchMedia('(prefers-color-scheme: dark)').matches),
   );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
   const [viewer, setViewer] = useState<{
     url: string;
     title: string;
@@ -75,7 +67,7 @@ export function PublicPortfolio({ route }: { route: string }) {
       if (event.key === 'Escape') setIsMenuOpen(false);
     };
     const closeOnDesktop = () => {
-      if (window.innerWidth > 850) setIsMenuOpen(false);
+      if (window.innerWidth > 1020) setIsMenuOpen(false);
     };
 
     document.body.classList.add('menu-open');
@@ -124,6 +116,62 @@ export function PublicPortfolio({ route }: { route: string }) {
     .sort((a, b) =>
       String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
     )[0];
+
+  const linkedDocumentIds = useMemo(
+    () =>
+      new Set(
+        [
+          resume?.id,
+          ...data.certifications.map((item) => item.documentId),
+          ...data.awards.map((item) => item.documentId),
+          ...data.projects.map((item) => item.documentationId),
+        ].filter(Boolean),
+      ),
+    [data.awards, data.certifications, data.projects, resume?.id],
+  );
+
+  const publicDocuments = useMemo(
+    () =>
+      data.documents.filter(
+        (document) =>
+          document.visibility === 'public' &&
+          document.publicDocument === true &&
+          document.kind !== 'profile-image' &&
+          document.kind !== 'resume' &&
+          !linkedDocumentIds.has(document.id),
+      ),
+    [data.documents, linkedDocumentIds],
+  );
+
+  const navigation = useMemo(
+    () => [
+      'About',
+      'Experience',
+      'Projects',
+      'Certifications',
+      'Skills',
+      ...(publicDocuments.length ? ['Documents'] : []),
+      'Contact',
+    ],
+    [publicDocuments.length],
+  );
+
+  useEffect(() => {
+    const sections = navigation
+      .map((item) => document.getElementById(item.toLowerCase()))
+      .filter((section): section is HTMLElement => Boolean(section));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setActiveSection(visible.target.id);
+      },
+      { rootMargin: '-25% 0px -60% 0px', threshold: [0, 0.1, 0.5] },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [navigation]);
 
   useEffect(() => {
     const connection = (
