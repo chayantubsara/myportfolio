@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import * as pdfjs from 'pdfjs-dist';
+import { loadDocumentBytes } from '../services/documents';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -35,26 +36,7 @@ export function PdfViewer({
     setDocument(undefined);
     setPage(1);
 
-    fetch(url)
-      .then(async (response) => {
-        const body = (await response.text()).trim();
-        if (!response.ok || body.startsWith('Document not found')) {
-          throw new Error(
-            'The linked file is private, missing, or has an incorrect document ID.',
-          );
-        }
-
-        try {
-          const binary = atob(body);
-          return Uint8Array.from(binary, (character) =>
-            character.charCodeAt(0),
-          );
-        } catch {
-          throw new Error(
-            'The server did not return a valid PDF. Re-upload this document from Admin.',
-          );
-        }
-      })
+    loadDocumentBytes(url)
       .then((bytes) => pdfjs.getDocument({ data: bytes }).promise)
       .then((loadedDocument) => {
         if (active) setDocument(loadedDocument);
