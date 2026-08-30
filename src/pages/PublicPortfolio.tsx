@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Award, BriefcaseBusiness, Cloud, Code2, Download, ExternalLink, GitBranch, GraduationCap, Mail, Menu, Moon, Network, Server, Sun, X } from 'lucide-react';
 import { getPortfolio } from '../services/api';
 import type { PortfolioData, Project } from '../types/portfolio';
 import { fallbackData } from '../data/fallback';
-import { PdfViewer } from '../components/PdfViewer';
+const PdfViewer = lazy(() =>
+  import('../components/PdfViewer').then((module) => ({ default: module.PdfViewer })),
+);
 
 const nav=['About','Experience','Projects','Certifications','Skills','Contact'];
 export function PublicPortfolio({route}:{route:string}){
@@ -22,7 +24,7 @@ export function PublicPortfolio({route}:{route:string}){
  <section className="section" id="skills"><div className="section-heading"><p className="section-number">05</p><h2>Skills & languages</h2></div><div className="skills-layout">{Object.entries(grouped).map(([category,items])=><div className="skill-group" key={category}><h3>{category}</h3><div>{items?.map(s=><span key={s.id}>{s.name}</span>)}</div></div>)}<div className="skill-group"><h3>Languages</h3>{data.languages.map(l=><p key={l.name}><strong>{l.name}</strong> — {l.level}</p>)}</div></div></section>
  <section className="contact" id="contact"><div><p className="section-number">06</p><h2>Let’s build reliable systems.</h2><p>Open to Co-op, internship, and IT-related opportunities.</p></div><a className="button light" href={`mailto:${data.profile?.email}`}><Mail/> {data.profile?.email}</a></section></main>
  <footer className="footer"><span>© {new Date().getFullYear()} {data.profile?.name}</span><a href="#/admin">Admin</a><div>{data.socialLinks.map(s=><a key={s.id} href={s.url} aria-label={s.platform}>{s.platform==='GitHub'?<GitBranch/>:<ExternalLink/>}</a>)}</div></footer>
- {viewer&&(viewer.url?<PdfViewer {...viewer} onClose={()=>setViewer(null)}/>:<div className="modal-backdrop"><div className="dialog"><button className="dialog-close" onClick={()=>setViewer(null)}><X/></button><h2>Resume available upon request</h2><p>The source resume contains private contact details, so it is not published automatically. A reviewed public copy can be enabled from Admin.</p><a className="button primary" href={`mailto:${data.profile?.email}`}>Request by email</a></div></div>)}{selected&&<ProjectDetail project={selected}/>}</div>
+ {viewer&&(viewer.url?<Suspense fallback={<div className="screen-loader">Loading document viewer…</div>}><PdfViewer {...viewer} onClose={()=>setViewer(null)}/></Suspense>:<div className="modal-backdrop"><div className="dialog"><button className="dialog-close" onClick={()=>setViewer(null)}><X/></button><h2>Resume available upon request</h2><p>The source resume contains private contact details, so it is not published automatically. A reviewed public copy can be enabled from Admin.</p><a className="button primary" href={`mailto:${data.profile?.email}`}>Request by email</a></div></div>)}{selected&&<ProjectDetail project={selected}/>}</div>
 }
 function ProjectCard({project,index}:{project:Project;index:number}){const icons=[Code2,Network,Server,Cloud];const Icon=icons[index%icons.length];return <a className="project-card" href={`#/projects/${project.id}`}><Icon/><span>{project.projectType}</span><h3>{project.name}</h3><p>{project.shortDescription}</p><ArrowRight/></a>}
 function ProjectDetail({project}:{project:Project}){return <div className="modal-backdrop"><article className="project-detail"><a className="dialog-close" href="#projects"><X/></a><p className="section-number">Academic case study</p><h2>{project.name}</h2><p className="lead">{project.shortDescription}</p><dl><div><dt>Course</dt><dd>{project.courseName||'To be added'}</dd></div><div><dt>Year</dt><dd>{project.year||'To be added'}</dd></div><div><dt>Objective</dt><dd>{project.objective||'More project details will be added later.'}</dd></div><div><dt>My role</dt><dd>{project.role||'More project details will be added later.'}</dd></div></dl></article></div>}
