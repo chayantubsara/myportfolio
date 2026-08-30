@@ -47,6 +47,8 @@ interface FieldDefinition {
   type?: FieldType;
   options?: string[];
   privateField?: boolean;
+  accept?: string;
+  help?: string;
 }
 
 const sharedFields: FieldDefinition[] = [
@@ -99,18 +101,18 @@ const fieldsByModule: Record<string, FieldDefinition[]> = {
     { key: 'featured', label: 'Featured', type: 'boolean' },
   ],
   Certifications: [
-    { key: 'name', label: 'Certification name' },
-    { key: 'shortName', label: 'Short name' },
-    { key: 'issuer', label: 'Issuer' },
-    { key: 'issuedDate', label: 'Issued date' },
-    { key: 'expirationDate', label: 'Expiration date' },
-    { key: 'credentialId', label: 'Credential ID', privateField: true },
-    { key: 'credentialUrl', label: 'Credential URL' },
-    { key: 'description', label: 'Description', type: 'textarea' },
-    { key: 'skills', label: 'Skills', type: 'list' },
-    { key: 'documentId', label: 'Document record ID' },
-    { key: 'publicDocument', label: 'Public document', type: 'boolean' },
-    { key: 'featured', label: 'Featured', type: 'boolean' },
+    { key: 'name', label: 'Certification name', help: 'Full name shown on the certificate.' },
+    { key: 'shortName', label: 'Short name', help: 'Abbreviation such as MTCNA.' },
+    { key: 'issuer', label: 'Issuer', help: 'Organization that issued it, such as MikroTik.' },
+    { key: 'issuedDate', label: 'Issued date', help: 'Use the date printed on the certificate.' },
+    { key: 'expirationDate', label: 'Expiration date', help: 'Leave blank when the certificate does not expire.' },
+    { key: 'credentialId', label: 'Credential ID', privateField: true, help: 'Certificate number supplied by the issuer. Leave blank if none is shown.' },
+    { key: 'credentialUrl', label: 'Credential verification URL', help: 'Official verification link, if the issuer provides one.' },
+    { key: 'description', label: 'Description', type: 'textarea', help: 'A short summary of what the certification covers.' },
+    { key: 'skills', label: 'Skills', type: 'list', help: 'Separate skills with commas.' },
+    { key: 'certificateFile', label: 'Certificate PDF', type: 'file', accept: 'application/pdf', help: 'Upload the certificate PDF. It will be linked automatically.' },
+    { key: 'publicDocument', label: 'Allow visitors to view the PDF', type: 'boolean', help: 'Turn on only when this certificate may be public.' },
+    { key: 'featured', label: 'Feature on portfolio', type: 'boolean', help: 'Highlights this certification on the public portfolio.' },
   ],
   Awards: [
     { key: 'name', label: 'Award name' },
@@ -570,7 +572,9 @@ function EditDrawer({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   function update(key: string, value: unknown) {
-    if (key === 'profileImage') setUploadFile(value instanceof File ? value : null);
+    if (key === 'profileImage' || key === 'certificateFile') {
+      setUploadFile(value instanceof File ? value : null);
+    }
     setRecord((current) => ({ ...current, [key]: value }));
   }
 
@@ -589,7 +593,29 @@ function EditDrawer({
       }
 
       const payload = { ...record };
+      if (module === 'Certifications' && uploadFile) {
+        const uploaded = await adminApi.uploadDocument(
+          uploadFile,
+          'certificate',
+          token,
+        );
+        const publishDocument =
+          record.publicDocument === true || record.publicDocument === 'true';
+        await adminApi.save(
+          'documents',
+          {
+            ...uploaded,
+            visibility: publishDocument ? 'public' : 'private',
+            publicDocument: publishDocument,
+            sortOrder: Number(record.sortOrder ?? 999),
+          },
+          token,
+        );
+        payload.documentId = uploaded.id;
+      }
+
       delete payload.profileImage;
+      delete payload.certificateFile;
       fields.forEach((field) => {
         if (field.type === 'list') {
           payload[field.key] = String(payload[field.key] ?? '')
@@ -658,10 +684,10 @@ function EditorField({
         {field.label}
         <input
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={field.accept ?? 'image/jpeg,image/png,image/webp'}
           onChange={(event) => onChange(event.target.files?.[0] ?? null)}
         />
-        <small>JPG, PNG, or WEBP up to 8 MB. Saving publishes the newest photo in the portfolio hero.</small>
+        <small>{field.help ?? 'JPG, PNG, or WEBP up to 8 MB.'}</small>
       </label>
     );
   }
@@ -695,7 +721,8 @@ function EditorField({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
-      {field.type === 'list' && <small>Separate items with commas.</small>}
+      {field.help && <small>{field.help}</small>}
+      {!field.help && field.type === 'list' && <small>Separate items with commas.</small>}
     </label>
   );
 }
