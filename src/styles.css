@@ -114,3 +114,41 @@ body{min-width:320px;overflow-x:hidden;line-height:1.5}
   .cert-row>svg{width:36px;height:36px}
   .cert-row>div:last-child{grid-column:1}
 }
+
+
+/* Admin editor: keep actions reachable while long forms scroll */
+.drawer-backdrop{overflow:hidden}
+.edit-drawer{
+  height:100dvh;
+  max-height:100dvh;
+  overflow:hidden;
+  padding-bottom:max(24px,env(safe-area-inset-bottom));
+}
+.edit-drawer>header{
+  flex:0 0 auto;
+  gap:16px;
+}
+.edit-drawer>header>div{min-width:0}
+.drawer-fields{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  padding:2px 8px 24px 2px;
+}
+.form-error{flex:0 0 auto}
+.drawer-actions{
+  flex:0 0 auto;
+  margin-top:0;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+  background:var(--white);
+}
+@media(max-width:560px){
+  .edit-drawer{width:100%;padding:22px 18px max(18px,env(safe-area-inset-bottom))}
+  .edit-drawer h2{font-size:23px}
+  .edit-drawer header p{margin-bottom:0}
+  .drawer-actions{display:grid;grid-template-columns:1fr 1fr}
+  .drawer-actions .button{width:100%;padding-inline:12px}
+}
