@@ -263,3 +263,77 @@ body{min-width:320px;overflow-x:hidden;line-height:1.5}
   .viewer footer button svg{width:22px;height:22px}
   .viewer footer>span{font-size:13px}
 }
+
+
+/* Stable navigation and public-content sections */
+.topbar>nav>a{position:relative}
+.topbar>nav>a::after{
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:3px;
+  height:2px;
+  border-radius:2px;
+  background:var(--cyan);
+  transform:scaleX(0);
+  transition:transform .2s ease;
+}
+.topbar>nav>a.active{color:#7ed8ff}
+.topbar>nav>a.active::after{transform:scaleX(1)}
+.documents-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.document-card{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;
+  gap:16px;
+  padding:22px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--white);
+}
+.document-card>svg{width:30px;height:30px;color:var(--blue)}
+.document-card span{font-size:12px;color:var(--blue);text-transform:uppercase;letter-spacing:.08em}
+.document-card h3{margin:5px 0 0;overflow-wrap:anywhere}
+.contact-links{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;max-width:620px}
+.button.social-button{border-color:#ffffff55;color:#fff;background:#ffffff12}
+.button.social-button:hover{background:#ffffff22}
+
+@media(max-width:1020px){
+  .topbar nav:not(.mobile-nav){display:none}
+  .menu-button{display:grid}
+  body.menu-open{overflow:hidden}
+  .topbar .mobile-nav{
+    position:fixed;
+    inset:76px 0 0;
+    z-index:50;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    padding:18px max(24px,calc((100vw - 560px)/2)) max(28px,env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--navy) 98%,transparent);
+    backdrop-filter:blur(18px);
+  }
+  .topbar .mobile-nav a{
+    display:flex;
+    align-items:center;
+    min-height:58px;
+    padding:8px 4px;
+    border-bottom:1px solid #ffffff18;
+    font-size:18px;
+    font-weight:650;
+  }
+  .topbar .mobile-nav a.active{color:#7ed8ff}
+  .documents-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:850px){
+  .topbar .mobile-nav{inset:72px 0 0}
+}
+
+@media(max-width:640px){
+  .document-card{grid-template-columns:38px minmax(0,1fr);padding:18px}
+  .document-card .button{grid-column:1/-1;width:100%}
+  .contact-links{width:100%;display:grid;grid-template-columns:1fr}
+  .contact-links .button{width:100%;min-width:0;overflow-wrap:anywhere}
+}
