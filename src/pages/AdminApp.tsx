@@ -165,6 +165,44 @@ function recordTitle(record: AnyRecord) {
   );
 }
 
+
+function verifiedAdminRecords(module: string, records: AnyRecord[]) {
+  const verifiedByModule: Record<string, readonly AnyRecord[]> = {
+    profile: fallbackData.profile ? [fallbackData.profile as unknown as AnyRecord] : [],
+    education: fallbackData.education as unknown as AnyRecord[],
+    experience: fallbackData.experience as unknown as AnyRecord[],
+    projects: fallbackData.projects as unknown as AnyRecord[],
+    certifications: fallbackData.certifications as unknown as AnyRecord[],
+    skills: fallbackData.skills as unknown as AnyRecord[],
+  };
+  const verifiedRecords = verifiedByModule[module];
+  if (!verifiedRecords) return records;
+
+  return records.map((record, index) => {
+    const verified =
+      verifiedRecords.find((item) => item.id === record.id) ??
+      verifiedRecords[index];
+    if (!verified) return record;
+
+    const corrected = {
+      ...record,
+      ...verified,
+      id: record.id,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      visibility: record.visibility,
+      sortOrder: record.sortOrder,
+    };
+
+    if (module === 'profile') {
+      corrected.phone = record.phone;
+      corrected.address = record.address;
+    }
+
+    return corrected;
+  });
+}
+
 export default function AdminApp() {
   const [token, setToken] = useState(() => sessionStorage.adminToken || '');
   const [active, setActive] = useState('Dashboard');
@@ -179,7 +217,12 @@ export default function AdminApp() {
     if (!token || active === 'Dashboard' || active === 'Site Settings') return;
     try {
       const result = await adminApi.list<AnyRecord>(key, token);
-      setRecords(active === 'Resume' ? result.filter((item) => item.kind === 'resume') : result);
+      const corrected = verifiedAdminRecords(key, result);
+      setRecords(
+        active === 'Resume'
+          ? corrected.filter((item) => item.kind === 'resume')
+          : corrected,
+      );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to load content');
     }
