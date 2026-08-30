@@ -166,7 +166,7 @@ function recordTitle(record: AnyRecord) {
 }
 
 
-function verifiedAdminRecords(module: string, records: AnyRecord[]) {
+function verifiedAdminRecords(module: string, records: AnyRecord[]): AnyRecord[] {
   const verifiedByModule: Record<string, readonly AnyRecord[]> = {
     profile: fallbackData.profile ? [fallbackData.profile as unknown as AnyRecord] : [],
     education: fallbackData.education as unknown as AnyRecord[],
@@ -184,7 +184,7 @@ function verifiedAdminRecords(module: string, records: AnyRecord[]) {
       verifiedRecords[index];
     if (!verified) return record;
 
-    const corrected = {
+    const corrected: AnyRecord = {
       ...record,
       ...verified,
       id: record.id,
