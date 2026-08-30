@@ -39,7 +39,7 @@ const modules = [
 ] as const;
 
 type AnyRecord = Record<string, unknown>;
-type FieldType = 'text' | 'email' | 'textarea' | 'number' | 'select' | 'boolean' | 'list';
+type FieldType = 'text' | 'email' | 'textarea' | 'number' | 'select' | 'boolean' | 'list' | 'file';
 
 interface FieldDefinition {
   key: string;
@@ -56,6 +56,7 @@ const sharedFields: FieldDefinition[] = [
 
 const fieldsByModule: Record<string, FieldDefinition[]> = {
   Profile: [
+    { key: 'profileImage', label: 'Profile photo', type: 'file' },
     { key: 'name', label: 'Display name' },
     { key: 'title', label: 'Professional title' },
     { key: 'introduction', label: 'Short introduction', type: 'textarea' },
@@ -506,8 +507,10 @@ function EditDrawer({
   const [record, setRecord] = useState<AnyRecord>(initialValues);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   function update(key: string, value: unknown) {
+    if (key === 'profileImage') setUploadFile(value instanceof File ? value : null);
     setRecord((current) => ({ ...current, [key]: value }));
   }
 
@@ -516,7 +519,17 @@ function EditDrawer({
     setBusy(true);
     setError('');
     try {
+      if (module === 'Profile' && uploadFile) {
+        const uploaded = await adminApi.uploadDocument(uploadFile, 'profile-image', token);
+        await adminApi.save(
+          'documents',
+          { ...uploaded, visibility: 'public', publicDocument: true, sortOrder: 0 },
+          token,
+        );
+      }
+
       const payload = { ...record };
+      delete payload.profileImage;
       fields.forEach((field) => {
         if (field.type === 'list') {
           payload[field.key] = String(payload[field.key] ?? '')
@@ -579,6 +592,20 @@ function EditorField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
+  if (field.type === 'file') {
+    return (
+      <label>
+        {field.label}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+        />
+        <small>JPG, PNG, or WEBP up to 8 MB. Saving publishes the newest photo in the portfolio hero.</small>
+      </label>
+    );
+  }
+
   if (field.type === 'boolean') {
     return (
       <label className="toggle-field">
