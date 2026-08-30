@@ -344,6 +344,38 @@ export function PublicPortfolio({ route }: { route: string }) {
               </div>
             </article>
           ))}
+          {data.awards.map((award) => (
+            <article className="cert-row" key={award.id}>
+              <Award aria-hidden="true" />
+              <div>
+                <strong>Award</strong>
+                <h3>{award.name}</h3>
+                <p>
+                  {award.issuer}
+                  {award.issuedDate ? ` · ${award.issuedDate}` : ''}
+                </p>
+              </div>
+              <div>
+                {award.documentId && award.publicDocument ? (
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      setViewer({
+                        url: documentUrl(award.documentId),
+                        title: award.name,
+                      })
+                    }
+                  >
+                    View award
+                  </button>
+                ) : (
+                  <span className="private-note">
+                    Document available upon request
+                  </span>
+                )}
+              </div>
+            </article>
+          ))}
         </section>
 
         <section className="section" id="skills">
