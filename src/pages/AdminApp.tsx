@@ -98,6 +98,8 @@ const fieldsByModule: Record<string, FieldDefinition[]> = {
     { key: 'skillsLearned', label: 'Skills learned', type: 'list' },
     { key: 'githubUrl', label: 'GitHub URL' },
     { key: 'demoUrl', label: 'Demo URL' },
+    { key: 'projectFile', label: 'Project documentation PDF', type: 'file', accept: 'application/pdf', help: 'Optional project report or documentation PDF.' },
+    { key: 'projectDocumentPublic', label: 'Allow visitors to view project PDF', type: 'boolean', help: 'Controls the uploaded project document only.' },
     { key: 'featured', label: 'Featured', type: 'boolean' },
   ],
   Certifications: [
@@ -119,8 +121,8 @@ const fieldsByModule: Record<string, FieldDefinition[]> = {
     { key: 'issuer', label: 'Issuer' },
     { key: 'issuedDate', label: 'Issued date' },
     { key: 'description', label: 'Description', type: 'textarea' },
-    { key: 'documentId', label: 'Document record ID' },
-    { key: 'publicDocument', label: 'Public document', type: 'boolean' },
+    { key: 'awardFile', label: 'Award PDF', type: 'file', accept: 'application/pdf', help: 'Upload the award PDF; the document ID is linked automatically.' },
+    { key: 'publicDocument', label: 'Allow visitors to view the PDF', type: 'boolean' },
     { key: 'featured', label: 'Featured', type: 'boolean' },
   ],
   Skills: [
@@ -137,17 +139,15 @@ const fieldsByModule: Record<string, FieldDefinition[]> = {
     { key: 'url', label: 'Profile URL' },
   ],
   Resume: [
-    { key: 'name', label: 'Document name' },
-    { key: 'driveFileId', label: 'Google Drive File ID', privateField: true },
-    { key: 'mimeType', label: 'MIME type' },
-    { key: 'publicDocument', label: 'Public document', type: 'boolean' },
+    { key: 'name', label: 'Document name', help: 'Example: Chayan Tubsara Resume' },
+    { key: 'resumeFile', label: 'Resume PDF', type: 'file', accept: 'application/pdf', help: 'Upload a PDF; Drive ID and MIME type are handled automatically.' },
+    { key: 'publicDocument', label: 'Allow visitors to view and download', type: 'boolean' },
   ],
   Documents: [
     { key: 'name', label: 'Document name' },
-    { key: 'kind', label: 'Document kind' },
-    { key: 'driveFileId', label: 'Google Drive File ID', privateField: true },
-    { key: 'mimeType', label: 'MIME type' },
-    { key: 'publicDocument', label: 'Public document', type: 'boolean' },
+    { key: 'kind', label: 'Document kind', help: 'Example: transcript, portfolio, or supporting-document.' },
+    { key: 'documentFile', label: 'Document PDF', type: 'file', accept: 'application/pdf', help: 'Upload a PDF; Drive ID and MIME type are handled automatically.' },
+    { key: 'publicDocument', label: 'Allow public access', type: 'boolean' },
   ],
 };
 
@@ -572,7 +572,14 @@ function EditDrawer({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   function update(key: string, value: unknown) {
-    if (key === 'profileImage' || key === 'certificateFile') {
+    if (
+      key === 'profileImage' ||
+      key === 'certificateFile' ||
+      key === 'awardFile' ||
+      key === 'projectFile' ||
+      key === 'resumeFile' ||
+      key === 'documentFile'
+    ) {
       setUploadFile(value instanceof File ? value : null);
     }
     setRecord((current) => ({ ...current, [key]: value }));
@@ -582,58 +589,123 @@ function EditDrawer({
     event.preventDefault();
     setBusy(true);
     setError('');
-    try {
-      if (module === 'Profile' && uploadFile) {
-        const uploaded = await adminApi.uploadDocument(uploadFile, 'profile-image', token);
-        await adminApi.save(
-          'documents',
-          { ...uploaded, visibility: 'public', publicDocument: true, sortOrder: 0 },
-          token,
-        );
-      }
 
-      const payload = { ...record };
-      if (module === 'Certifications' && uploadFile) {
+    try {
+      const payload: AnyRecord = { ...record };
+      let temporaryDocumentId = '';
+
+      if (module === 'Profile' && uploadFile) {
         const uploaded = await adminApi.uploadDocument(
           uploadFile,
-          'certificate',
+          'profile-image',
           token,
         );
-        const publishDocument =
-          record.publicDocument === true || record.publicDocument === 'true';
         await adminApi.save(
           'documents',
           {
             ...uploaded,
-            visibility: publishDocument ? 'public' : 'private',
-            publicDocument: publishDocument,
+            visibility: 'public',
+            publicDocument: true,
+            sortOrder: 0,
+          },
+          token,
+        );
+      }
+
+      const linkedDocumentConfig: Record<
+        string,
+        { kind: string; idField: string; publicField: string }
+      > = {
+        Certifications: {
+          kind: 'certificate',
+          idField: 'documentId',
+          publicField: 'publicDocument',
+        },
+        Awards: {
+          kind: 'award',
+          idField: 'documentId',
+          publicField: 'publicDocument',
+        },
+        Projects: {
+          kind: 'project-document',
+          idField: 'documentationId',
+          publicField: 'projectDocumentPublic',
+        },
+      };
+      const linkedConfig = linkedDocumentConfig[module];
+
+      if (linkedConfig && uploadFile) {
+        const uploaded = await adminApi.uploadDocument(
+          uploadFile,
+          linkedConfig.kind,
+          token,
+        );
+        const publish =
+          record[linkedConfig.publicField] === true ||
+          record[linkedConfig.publicField] === 'true';
+        await adminApi.save(
+          'documents',
+          {
+            ...uploaded,
+            visibility: publish ? 'public' : 'private',
+            publicDocument: publish,
             sortOrder: Number(record.sortOrder ?? 999),
           },
           token,
         );
-        payload.documentId = uploaded.id;
-      } else if (module === 'Certifications' && payload.documentId) {
+        payload[linkedConfig.idField] = uploaded.id;
+      } else if (linkedConfig && payload[linkedConfig.idField]) {
         const documents = await adminApi.list<AnyRecord>('documents', token);
         const linkedDocument = documents.find(
-          (document) => document.id === payload.documentId,
+          (document) => document.id === payload[linkedConfig.idField],
         );
         if (linkedDocument) {
-          const publishDocument =
-            record.publicDocument === true || record.publicDocument === 'true';
+          const publish =
+            record[linkedConfig.publicField] === true ||
+            record[linkedConfig.publicField] === 'true';
           await adminApi.save(
             'documents',
             {
               ...linkedDocument,
-              visibility: publishDocument ? 'public' : 'private',
-              publicDocument: publishDocument,
+              visibility: publish ? 'public' : 'private',
+              publicDocument: publish,
             },
             token,
           );
         }
       }
 
-      delete payload.profileImage;
-      delete payload.certificateFile;
+      if ((module === 'Resume' || module === 'Documents') && uploadFile) {
+        const kind =
+          module === 'Resume' ? 'resume' : String(record.kind || 'document');
+        const uploaded = await adminApi.uploadDocument(uploadFile, kind, token);
+        const publish =
+          record.publicDocument === true || record.publicDocument === 'true';
+
+        if (initialRecord?.id) {
+          payload.driveFileId = uploaded.driveFileId;
+          payload.mimeType = uploaded.mimeType;
+          payload.name = payload.name || uploaded.name;
+          temporaryDocumentId = String(uploaded.id);
+        } else {
+          Object.assign(payload, uploaded);
+        }
+
+        payload.kind = kind;
+        payload.visibility = publish ? 'public' : 'private';
+        payload.publicDocument = publish;
+      }
+
+      [
+        'profileImage',
+        'certificateFile',
+        'awardFile',
+        'projectFile',
+        'projectDocumentPublic',
+        'resumeFile',
+        'documentFile',
+      ].forEach((key) => delete payload[key]);
+
       fields.forEach((field) => {
         if (field.type === 'list') {
           payload[field.key] = String(payload[field.key] ?? '')
@@ -645,7 +717,11 @@ function EditDrawer({
           payload[field.key] = Number(payload[field.key] ?? 0);
         }
       });
+
       await adminApi.save(moduleKey(module), payload, token);
+      if (temporaryDocumentId) {
+        await adminApi.remove('documents', temporaryDocumentId, token);
+      }
       onSaved();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Save failed');
