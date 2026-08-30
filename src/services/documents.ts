@@ -73,8 +73,10 @@ export function prefetchDocuments(urls: string[]) {
 
 export async function downloadDocument(url: string, fileName: string) {
   const bytes = await loadDocumentBytes(url);
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
   const href = URL.createObjectURL(
-    new Blob([bytes], { type: 'application/pdf' }),
+    new Blob([buffer], { type: 'application/pdf' }),
   );
   const link = document.createElement('a');
   link.href = href;
