@@ -112,12 +112,11 @@ export const fallbackData: PortfolioData = {
       credentialUrl: '',
       documentId: '',
       description: '',
-      awards: [],
-  skills: [],
       publicDocument: false,
       featured: true,
     },
   ],
+  awards: [],
   skills: [
     ['Google Workspace', 'Productivity'],
     ['Microsoft Office', 'Productivity'],
