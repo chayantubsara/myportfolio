@@ -540,13 +540,68 @@ export function PublicPortfolio({ route }: { route: string }) {
           </div>
         </section>
 
+        {publicDocuments.length > 0 && (
+          <section className="section public-documents" id="documents">
+            <div className="section-heading">
+              <p className="section-number">06 · Documents</p>
+              <h2>Public documents</h2>
+              <p>Supporting files explicitly published from Admin.</p>
+            </div>
+            <div className="documents-grid">
+              {publicDocuments.map((document) => (
+                <article className="document-card" key={document.id}>
+                  <FileTextIcon aria-hidden="true" />
+                  <div>
+                    <span>{document.kind || 'Document'}</span>
+                    <h3>{document.name}</h3>
+                  </div>
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      setViewer({
+                        url: documentUrl(
+                          isStaticDocumentReference(document.driveFileId)
+                            ? document.driveFileId
+                            : document.id,
+                          document.updatedAt,
+                        ),
+                        title: document.name,
+                      })
+                    }
+                  >
+                    View PDF
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="contact" id="contact">
           <div>
-            <p className="section-number">06 · Contact</p>
+            <p className="section-number">
+              {publicDocuments.length ? '07' : '06'} · Contact
+            </p>
+            <h2>Connect with me</h2>
+            <p>Email and public social profiles managed from Admin.</p>
           </div>
-          <a className="button light" href={`mailto:${data.profile?.email}`}>
-            <Mail /> {data.profile?.email}
-          </a>
+          <div className="contact-links">
+            <a className="button light" href={`mailto:${data.profile?.email}`}>
+              <Mail /> {data.profile?.email}
+            </a>
+            {data.socialLinks.map((link) => (
+              <a
+                className="button social-button"
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {link.platform === 'GitHub' ? <GitBranch /> : <ExternalLink />}
+                {link.platform}
+              </a>
+            ))}
+          </div>
         </section>
       </main>
 
