@@ -583,7 +583,6 @@ export function PublicPortfolio({ route }: { route: string }) {
               {publicDocuments.length ? '07' : '06'} · Contact
             </p>
             <h2>Connect with me</h2>
-            <p>Email and public social profiles managed from Admin.</p>
           </div>
           <div className="contact-links">
             <a className="button light" href={`mailto:${data.profile?.email}`}>
