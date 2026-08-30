@@ -1,33 +1,550 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Award, BriefcaseBusiness, Cloud, Code2, Download, ExternalLink, GitBranch, GraduationCap, Mail, Menu, Moon, Network, Server, Sun, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Award,
+  BriefcaseBusiness,
+  Cloud,
+  Code2,
+  Download,
+  ExternalLink,
+  GitBranch,
+  GraduationCap,
+  Mail,
+  Menu,
+  Moon,
+  Network,
+  Server,
+  Sun,
+  X,
+} from 'lucide-react';
+import { fallbackData } from '../data/fallback';
 import { getPortfolio } from '../services/api';
 import type { PortfolioData, Project } from '../types/portfolio';
-import { fallbackData } from '../data/fallback';
+
 const PdfViewer = lazy(() =>
-  import('../components/PdfViewer').then((module) => ({ default: module.PdfViewer })),
+  import('../components/PdfViewer').then((module) => ({
+    default: module.PdfViewer,
+  })),
 );
 
-const nav=['About','Experience','Projects','Certifications','Skills','Contact'];
-export function PublicPortfolio({route}:{route:string}){
- const [data,setData]=useState<PortfolioData>(fallbackData);const [dark,setDark]=useState(()=>localStorage.theme==='dark'||(!localStorage.theme&&matchMedia('(prefers-color-scheme:dark)').matches));const [menu,setMenu]=useState(false);const [viewer,setViewer]=useState<{url:string;title:string}|null>(null);
- useEffect(()=>{getPortfolio().then(setData)},[]); useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';localStorage.theme=dark?'dark':'light'},[dark]);
- const grouped=useMemo(()=>data.skills.reduce<Record<string,typeof data.skills>>((result,skill)=>{(result[skill.category]??=[]).push(skill);return result},{}),[data.skills]); const deepProject=route.match(/^#\/projects\/(.+)$/)?.[1]; const selected=data.projects.find(p=>p.id===deepProject);
- const resume=data.documents.find(d=>d.kind==='resume'&&d.publicDocument&&d.visibility==='public');
- const profileImage=[...data.documents].filter(d=>d.kind==='profile-image'&&d.publicDocument&&d.visibility==='public').sort((a,b)=>String(b.updatedAt??'').localeCompare(String(a.updatedAt??'')))[0];
- const openResume=()=>resume?setViewer({url:`${import.meta.env.VITE_GAS_API_URL}?action=document&id=${encodeURIComponent(resume.id)}`,title:resume.name}):setViewer({url:'',title:'Resume'});
- async function downloadResume(){if(!resume)return;const url=String(import.meta.env.VITE_GAS_API_URL)+'?action=document&id='+encodeURIComponent(resume.id);const base64=await fetch(url).then(r=>r.text());const bytes=Uint8Array.from(atob(base64.trim()),c=>c.charCodeAt(0));const href=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));const link=document.createElement('a');link.href=href;link.download='Chayon-Tubsoro-Resume.pdf';link.click();URL.revokeObjectURL(href)}
- return <div className="site-shell"><header className="topbar"><a className="brand" href="#home"><Network/><span>{data.profile?.name.replace('Mr. ','')}<small>Network Engineering Portfolio</small></span></a><nav>{nav.map(n=><a key={n} href={`#${n.toLowerCase()}`}>{n}</a>)}</nav><div className="top-actions"><button className="icon-button" onClick={()=>setDark(v=>!v)} aria-label="Toggle theme">{dark?<Sun/>:<Moon/>}</button><button className="icon-button menu-button" onClick={()=>setMenu(v=>!v)} aria-label="Menu">{menu?<X/>:<Menu/>}</button></div>{menu&&<div className="mobile-nav">{nav.map(n=><a key={n} onClick={()=>setMenu(false)} href={`#${n.toLowerCase()}`}>{n}</a>)}</div>}</header>
- <main><section className="hero" id="home"><div className="hero-copy"><h1>{data.profile?.name}</h1><h2>{data.profile?.title}</h2><p>{data.profile?.introduction}</p><div className="hero-buttons"><a className="button primary" href="#projects">View Projects <ArrowRight/></a><button className="button secondary" onClick={openResume}>View Resume</button>{resume?<button className="button ghost" onClick={downloadResume}><Download/> Download Resume</button>:<span className="private-note">Resume available upon request</span>}</div></div>{profileImage?<ProfilePortrait documentId={profileImage.id} mimeType={profileImage.mimeType} name={data.profile?.name??'Profile'}/>:<div className="network-visual" aria-hidden="true"><div className="orb"><Network/></div><span className="node n1"/><span className="node n2"/><span className="node n3"/><span className="line l1"/><span className="line l2"/><span className="line l3"/></div>}</section>
- <section className="section split" id="about"><div><p className="section-number">01</p><h2>About & education</h2><p className="lead">{data.profile?.about}</p></div><div className="education-list">{data.education.map(item=><article key={item.id}><GraduationCap/><div><h3>{item.institution}</h3><p>{item.qualification}</p><span>{item.startYear} — {item.endYear}</span></div></article>)}</div></section>
- <section className="section dark-band" id="experience"><div className="section-heading"><p className="section-number">02</p><h2>Experience</h2></div>{data.experience.map(item=><article className="experience" key={item.id}><div className="experience-meta"><BriefcaseBusiness/><span>{item.startDate} — {item.endDate}</span><strong>{item.employmentType}</strong></div><div><h3>{item.position}</h3><h4>{item.company}</h4><ul>{item.responsibilities.map(r=><li key={r}>{r}</li>)}</ul></div></article>)}</section>
- <section className="section" id="projects"><div className="section-heading"><p className="section-number">03</p><h2>Academic projects</h2><p>Coursework is kept separate from professional experience. Details remain concise until supporting information is added.</p></div><div className="projects-grid">{data.projects.map((p,i)=><ProjectCard key={p.id} project={p} index={i}/>)}</div></section>
- <section className="section certification-band" id="certifications"><div className="section-heading"><p className="section-number">04</p><h2>Certifications & awards</h2></div>{data.certifications.map(c=><article className="cert-row" key={c.id}><Award/><div><strong>{c.shortName}</strong><h3>{c.name}</h3><p>{c.issuer}{c.issuedDate?` · ${c.issuedDate}`:''}</p></div><div>{c.documentId&&c.publicDocument?<button className="button secondary" onClick={()=>setViewer({url:`${import.meta.env.VITE_GAS_API_URL}?action=document&id=${c.documentId}`,title:c.name})}>View certificate</button>:<span className="private-note">Document available upon request</span>}</div></article>)}</section>
- <section className="section" id="skills"><div className="section-heading"><p className="section-number">05</p><h2>Skills & languages</h2></div><div className="skills-layout">{Object.entries(grouped).map(([category,items])=><div className="skill-group" key={category}><h3>{category}</h3><div>{items?.map(s=><span key={s.id}>{s.name}</span>)}</div></div>)}<div className="skill-group"><h3>Languages</h3>{data.languages.map(l=><p key={l.name}><strong>{l.name}</strong> — {l.level}</p>)}</div></div></section>
- <section className="contact" id="contact"><div><p className="section-number">06</p><h2>Let’s build reliable systems.</h2><p>Open to Co-op, internship, and IT-related opportunities.</p></div><a className="button light" href={`mailto:${data.profile?.email}`}><Mail/> {data.profile?.email}</a></section></main>
- <footer className="footer"><span>© {new Date().getFullYear()} {data.profile?.name}</span><a href="#/admin">Admin</a><div>{data.socialLinks.map(s=><a key={s.id} href={s.url} aria-label={s.platform}>{s.platform==='GitHub'?<GitBranch/>:<ExternalLink/>}</a>)}</div></footer>
- {viewer&&(viewer.url?<Suspense fallback={<div className="screen-loader">Loading document viewer…</div>}><PdfViewer {...viewer} onClose={()=>setViewer(null)}/></Suspense>:<div className="modal-backdrop"><div className="dialog"><button className="dialog-close" onClick={()=>setViewer(null)}><X/></button><h2>Resume available upon request</h2><p>The source resume contains private contact details, so it is not published automatically. A reviewed public copy can be enabled from Admin.</p><a className="button primary" href={`mailto:${data.profile?.email}`}>Request by email</a></div></div>)}{selected&&<ProjectDetail project={selected}/>}</div>
-}
-function ProjectCard({project,index}:{project:Project;index:number}){const icons=[Code2,Network,Server,Cloud];const Icon=icons[index%icons.length];return <a className="project-card" href={`#/projects/${project.id}`}><Icon/><span>{project.projectType}</span><h3>{project.name}</h3><p>{project.shortDescription}</p><ArrowRight/></a>}
-function ProjectDetail({project}:{project:Project}){return <div className="modal-backdrop"><article className="project-detail"><a className="dialog-close" href="#projects"><X/></a><p className="section-number">Academic case study</p><h2>{project.name}</h2><p className="lead">{project.shortDescription}</p><dl><div><dt>Course</dt><dd>{project.courseName||'To be added'}</dd></div><div><dt>Year</dt><dd>{project.year||'To be added'}</dd></div><div><dt>Objective</dt><dd>{project.objective||'More project details will be added later.'}</dd></div><div><dt>My role</dt><dd>{project.role||'More project details will be added later.'}</dd></div></dl></article></div>}
+const navigation = [
+  'About',
+  'Experience',
+  'Projects',
+  'Certifications',
+  'Skills',
+  'Contact',
+];
 
-function ProfilePortrait({documentId,mimeType,name}:{documentId:string;mimeType:string;name:string}){const [src,setSrc]=useState('');useEffect(()=>{let active=true;const url=String(import.meta.env.VITE_GAS_API_URL)+'?action=document&id='+encodeURIComponent(documentId);fetch(url).then(response=>{if(!response.ok)throw new Error('Profile image unavailable');return response.text()}).then(base64=>{if(active)setSrc(`data:${mimeType};base64,${base64.trim()}`)}).catch(()=>{if(active)setSrc('')});return()=>{active=false}},[documentId,mimeType]);return <div className="profile-portrait">{src?<img src={src} alt={`${name} profile`} width="430" height="500"/>:<div className="profile-image-skeleton" aria-label="Loading profile photo"/>}</div>}
+export function PublicPortfolio({ route }: { route: string }) {
+  const [data, setData] = useState<PortfolioData>(fallbackData);
+  const [isDark, setIsDark] = useState(
+    () =>
+      localStorage.theme === 'dark' ||
+      (!localStorage.theme &&
+        matchMedia('(prefers-color-scheme: dark)').matches),
+  );
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [viewer, setViewer] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+
+  useEffect(() => {
+    getPortfolio().then(setData);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    localStorage.theme = isDark ? 'dark' : 'light';
+  }, [isDark]);
+
+  const groupedSkills = useMemo(
+    () =>
+      data.skills.reduce<Record<string, typeof data.skills>>(
+        (groups, skill) => {
+          (groups[skill.category] ??= []).push(skill);
+          return groups;
+        },
+        {},
+      ),
+    [data.skills],
+  );
+
+  const selectedProjectId = route.match(/^#\/projects\/(.+)$/)?.[1];
+  const selectedProject = data.projects.find(
+    (project) => project.id === selectedProjectId,
+  );
+  const resume = data.documents.find(
+    (document) =>
+      document.kind === 'resume' &&
+      document.publicDocument &&
+      document.visibility === 'public',
+  );
+  const profileImage = [...data.documents]
+    .filter(
+      (document) =>
+        document.kind === 'profile-image' &&
+        document.publicDocument &&
+        document.visibility === 'public',
+    )
+    .sort((a, b) =>
+      String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
+    )[0];
+
+  function closeMenu() {
+    setIsMenuOpen(false);
+  }
+
+  function openResume() {
+    if (!resume) {
+      setViewer({ url: '', title: 'Resume' });
+      return;
+    }
+
+    setViewer({
+      url: documentUrl(resume.id),
+      title: resume.name,
+    });
+  }
+
+  async function downloadResume() {
+    if (!resume) return;
+
+    const base64 = await fetch(documentUrl(resume.id)).then((response) =>
+      response.text(),
+    );
+    const bytes = Uint8Array.from(atob(base64.trim()), (character) =>
+      character.charCodeAt(0),
+    );
+    const href = URL.createObjectURL(
+      new Blob([bytes], { type: 'application/pdf' }),
+    );
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = 'Chayan-Tubsara-Resume.pdf';
+    link.click();
+    URL.revokeObjectURL(href);
+  }
+
+  return (
+    <div className="site-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
+      <header className="topbar">
+        <a className="brand" href="#home" aria-label="Portfolio home">
+          <Network aria-hidden="true" />
+          <span>
+            {data.profile?.name.replace('Mr. ', '')}
+            <small>Network Engineering Portfolio</small>
+          </span>
+        </a>
+
+        <nav aria-label="Primary navigation">
+          {navigation.map((item) => (
+            <a key={item} href={`#${item.toLowerCase()}`}>
+              {item}
+            </a>
+          ))}
+        </nav>
+
+        <div className="top-actions">
+          <button
+            className="icon-button"
+            onClick={() => setIsDark((current) => !current)}
+            aria-label={isDark ? 'Use light theme' : 'Use dark theme'}
+          >
+            {isDark ? <Sun /> : <Moon />}
+          </button>
+          <button
+            className="icon-button menu-button"
+            onClick={() => setIsMenuOpen((current) => !current)}
+            aria-label="Open navigation menu"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-navigation"
+          >
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+
+        {isMenuOpen && (
+          <nav
+            className="mobile-nav"
+            id="mobile-navigation"
+            aria-label="Mobile navigation"
+          >
+            {navigation.map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                onClick={closeMenu}
+              >
+                {item}
+              </a>
+            ))}
+          </nav>
+        )}
+      </header>
+
+      <main id="main-content">
+        <section className="hero" id="home">
+          <div className="hero-copy">
+            <p className="hero-eyebrow">Network Engineering · IT Infrastructure</p>
+            <h1>{data.profile?.name}</h1>
+            <h2>{data.profile?.title}</h2>
+            <p className="hero-summary">{data.profile?.introduction}</p>
+            <div className="hero-buttons">
+              <a className="button primary" href="#projects">
+                View projects <ArrowRight />
+              </a>
+              <button className="button secondary" onClick={openResume}>
+                View resume
+              </button>
+              {resume ? (
+                <button className="button ghost" onClick={downloadResume}>
+                  <Download /> Download resume
+                </button>
+              ) : (
+                <span className="private-note">
+                  Public resume available upon request
+                </span>
+              )}
+            </div>
+          </div>
+
+          {profileImage ? (
+            <ProfilePortrait
+              documentId={profileImage.id}
+              mimeType={profileImage.mimeType}
+              name={data.profile?.name ?? 'Profile'}
+            />
+          ) : (
+            <div className="network-visual" aria-hidden="true">
+              <div className="orb">
+                <Network />
+              </div>
+              <span className="node n1" />
+              <span className="node n2" />
+              <span className="node n3" />
+              <span className="line l1" />
+              <span className="line l2" />
+              <span className="line l3" />
+            </div>
+          )}
+        </section>
+
+        <section className="section split" id="about">
+          <div>
+            <p className="section-number">01 · Profile</p>
+            <h2>Personal goal & education</h2>
+            <p className="lead">{data.profile?.about}</p>
+          </div>
+          <div className="education-list">
+            {data.education.map((item) => (
+              <article key={item.id}>
+                <GraduationCap aria-hidden="true" />
+                <div>
+                  <h3>{item.institution}</h3>
+                  <p>{item.qualification}</p>
+                  <span>
+                    {item.startYear} — {item.endYear}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section dark-band" id="experience">
+          <div className="section-heading">
+            <p className="section-number">02 · Experience</p>
+            <h2>Hands-on network experience</h2>
+          </div>
+          {data.experience.map((item) => (
+            <article className="experience" key={item.id}>
+              <div className="experience-meta">
+                <BriefcaseBusiness aria-hidden="true" />
+                <span>
+                  {item.startDate} — {item.endDate}
+                </span>
+                <strong>{item.employmentType}</strong>
+              </div>
+              <div>
+                <h3>{item.position}</h3>
+                <h4>{item.company}</h4>
+                <ul>
+                  {item.responsibilities.map((responsibility) => (
+                    <li key={responsibility}>{responsibility}</li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="section" id="projects">
+          <div className="section-heading">
+            <p className="section-number">03 · Selected work</p>
+            <h2>Academic projects</h2>
+            <p>
+              Practical university coursework across web development,
+              networking, server administration, and cybersecurity.
+            </p>
+          </div>
+          <div className="projects-grid">
+            {data.projects.map((project, index) => (
+              <ProjectCard key={project.id} project={project} index={index} />
+            ))}
+          </div>
+        </section>
+
+        <section className="section certification-band" id="certifications">
+          <div className="section-heading">
+            <p className="section-number">04 · Credentials</p>
+            <h2>Certifications & awards</h2>
+          </div>
+          {data.certifications.map((certification) => (
+            <article className="cert-row" key={certification.id}>
+              <Award aria-hidden="true" />
+              <div>
+                <strong>{certification.shortName}</strong>
+                <h3>{certification.name}</h3>
+                <p>
+                  {certification.issuer}
+                  {certification.issuedDate
+                    ? ` · ${certification.issuedDate}`
+                    : ''}
+                </p>
+              </div>
+              <div>
+                {certification.documentId &&
+                certification.publicDocument ? (
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      setViewer({
+                        url: documentUrl(certification.documentId),
+                        title: certification.name,
+                      })
+                    }
+                  >
+                    View certificate
+                  </button>
+                ) : (
+                  <span className="private-note">
+                    Document available upon request
+                  </span>
+                )}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="section" id="skills">
+          <div className="section-heading">
+            <p className="section-number">05 · Capabilities</p>
+            <h2>Skills & languages</h2>
+          </div>
+          <div className="skills-layout">
+            {Object.entries(groupedSkills).map(([category, skills]) => (
+              <div className="skill-group" key={category}>
+                <h3>{category}</h3>
+                <div>
+                  {skills.map((skill) => (
+                    <span key={skill.id}>{skill.name}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="skill-group">
+              <h3>Languages</h3>
+              {data.languages.map((language) => (
+                <p key={language.name}>
+                  <strong>{language.name}</strong> — {language.level}
+                </p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="contact" id="contact">
+          <div>
+            <p className="section-number">06 · Contact</p>
+            <h2>Let’s build reliable systems.</h2>
+            <p>Open to Co-op, internship, and IT-related opportunities.</p>
+          </div>
+          <a className="button light" href={`mailto:${data.profile?.email}`}>
+            <Mail /> {data.profile?.email}
+          </a>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <span>
+          © {new Date().getFullYear()} {data.profile?.name}
+        </span>
+        <a href="#/admin">Admin</a>
+        <div>
+          {data.socialLinks.map((link) => (
+            <a key={link.id} href={link.url} aria-label={link.platform}>
+              {link.platform === 'GitHub' ? <GitBranch /> : <ExternalLink />}
+            </a>
+          ))}
+        </div>
+      </footer>
+
+      {viewer &&
+        (viewer.url ? (
+          <Suspense
+            fallback={<div className="screen-loader">Loading viewer…</div>}
+          >
+            <PdfViewer {...viewer} onClose={() => setViewer(null)} />
+          </Suspense>
+        ) : (
+          <div className="modal-backdrop">
+            <div className="dialog" role="dialog" aria-modal="true">
+              <button
+                className="dialog-close"
+                onClick={() => setViewer(null)}
+                aria-label="Close"
+              >
+                <X />
+              </button>
+              <h2>Resume available upon request</h2>
+              <p>
+                The source resume contains private contact details, so it is not
+                published automatically.
+              </p>
+              <a
+                className="button primary"
+                href={`mailto:${data.profile?.email}`}
+              >
+                Request by email
+              </a>
+            </div>
+          </div>
+        ))}
+
+      {selectedProject && <ProjectDetail project={selectedProject} />}
+    </div>
+  );
+}
+
+function documentUrl(documentId: string) {
+  return (
+    String(import.meta.env.VITE_GAS_API_URL) +
+    '?action=document&id=' +
+    encodeURIComponent(documentId)
+  );
+}
+
+function ProjectCard({
+  project,
+  index,
+}: {
+  project: Project;
+  index: number;
+}) {
+  const icons = [Code2, Network, Server, Cloud];
+  const Icon = icons[index % icons.length];
+
+  return (
+    <a className="project-card" href={`#/projects/${project.id}`}>
+      <Icon aria-hidden="true" />
+      <span>{project.projectType}</span>
+      <h3>{project.name}</h3>
+      <p>{project.shortDescription}</p>
+      <span className="project-link">
+        View project <ArrowRight aria-hidden="true" />
+      </span>
+    </a>
+  );
+}
+
+function ProjectDetail({ project }: { project: Project }) {
+  return (
+    <div className="modal-backdrop">
+      <article className="project-detail" role="dialog" aria-modal="true">
+        <a className="dialog-close" href="#projects" aria-label="Close project">
+          <X />
+        </a>
+        <p className="section-number">Academic case study</p>
+        <h2>{project.name}</h2>
+        <p className="lead">{project.shortDescription}</p>
+        <dl>
+          <div>
+            <dt>Course</dt>
+            <dd>{project.courseName || 'To be added'}</dd>
+          </div>
+          <div>
+            <dt>Year</dt>
+            <dd>{project.year || 'To be added'}</dd>
+          </div>
+          <div>
+            <dt>Objective</dt>
+            <dd>{project.objective || 'More project details will be added.'}</dd>
+          </div>
+          <div>
+            <dt>My role</dt>
+            <dd>{project.role || 'More project details will be added.'}</dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  );
+}
+
+function ProfilePortrait({
+  documentId,
+  mimeType,
+  name,
+}: {
+  documentId: string;
+  mimeType: string;
+  name: string;
+}) {
+  const [source, setSource] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch(documentUrl(documentId))
+      .then((response) => {
+        if (!response.ok) throw new Error('Profile image unavailable');
+        return response.text();
+      })
+      .then((base64) => {
+        if (isActive) {
+          setSource(`data:${mimeType};base64,${base64.trim()}`);
+        }
+      })
+      .catch(() => {
+        if (isActive) setSource('');
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [documentId, mimeType]);
+
+  return (
+    <div className="profile-portrait">
+      {source ? (
+        <img
+          src={source}
+          alt={`${name} profile`}
+          width="430"
+          height="500"
+          decoding="async"
+        />
+      ) : (
+        <div
+          className="profile-image-skeleton"
+          aria-label="Loading profile photo"
+        />
+      )}
+    </div>
+  );
+}
