@@ -5,25 +5,6 @@ function decodeBase64(base64: string) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-async function fetchDocument(url: string) {
-  const response = await fetch(url);
-  const body = (await response.text()).trim();
-
-  if (!response.ok || body.startsWith('Document not found')) {
-    throw new Error(
-      'The linked file is private, missing, or has an incorrect document ID.',
-    );
-  }
-
-  try {
-    return decodeBase64(body);
-  } catch {
-    throw new Error(
-      'The server did not return a valid PDF. Re-upload it from Admin.',
-    );
-  }
-}
-
 async function loadFromPersistentCache(url: string) {
   if (!('caches' in window)) return null;
   const cache = await caches.open('portfolio-documents-v1');
