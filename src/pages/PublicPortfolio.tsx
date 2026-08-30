@@ -152,7 +152,12 @@ export function PublicPortfolio({ route }: { route: string }) {
     const document = data.documents.find((item) => item.id === documentId);
     if (!document) return;
     setViewer({
-      url: documentUrl(document.id, document.updatedAt),
+      url: documentUrl(
+        isStaticDocumentReference(document.driveFileId)
+          ? document.driveFileId
+          : document.id,
+        document.updatedAt,
+      ),
       title,
     });
   }
@@ -168,7 +173,12 @@ export function PublicPortfolio({ route }: { route: string }) {
   async function downloadResume() {
     if (!resume) return;
     await downloadDocument(
-      documentUrl(resume.id, resume.updatedAt),
+      documentUrl(
+        isStaticDocumentReference(resume.driveFileId)
+          ? resume.driveFileId
+          : resume.id,
+        resume.updatedAt,
+      ),
       'Chayan-Tubsara-Resume.pdf',
     );
   }
@@ -521,14 +531,18 @@ export function PublicPortfolio({ route }: { route: string }) {
           project={selectedProject}
           documentName={selectedProjectDocument?.name}
           onViewDocument={
-            selectedProjectDocument
+            selectedProjectDocument ||
+            isStaticDocumentReference(selectedProject.documentationId)
               ? () =>
                   setViewer({
                     url: documentUrl(
-                      selectedProjectDocument.id,
-                      selectedProjectDocument.updatedAt,
+                      selectedProjectDocument?.driveFileId ||
+                        selectedProject.documentationId,
+                      selectedProjectDocument?.updatedAt,
                     ),
-                    title: selectedProjectDocument.name,
+                    title:
+                      selectedProjectDocument?.name ||
+                      `${selectedProject.name} documentation`,
                   })
               : undefined
           }
@@ -538,10 +552,33 @@ export function PublicPortfolio({ route }: { route: string }) {
   );
 }
 
-function documentUrl(documentId: string, version = '') {
+function isStaticDocumentReference(reference: unknown) {
+  const value = String(reference ?? '').trim();
+  return (
+    value.startsWith('documents/') ||
+    value.startsWith('/documents/') ||
+    value.startsWith('https://')
+  );
+}
+
+function documentUrl(reference: string, version = '') {
+  const value = String(reference ?? '').trim();
+
+  if (value.startsWith('https://')) {
+    return value;
+  }
+
+  if (
+    value.startsWith('documents/') ||
+    value.startsWith('/documents/')
+  ) {
+    const relativePath = value.replace(/^\/+/, '');
+    return `${import.meta.env.BASE_URL}${relativePath}`;
+  }
+
   const params = new URLSearchParams({
     action: 'document',
-    id: documentId,
+    id: value,
   });
   if (version) params.set('v', version);
   return `${String(import.meta.env.VITE_GAS_API_URL)}?${params.toString()}`;
