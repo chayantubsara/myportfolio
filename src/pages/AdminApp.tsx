@@ -213,16 +213,28 @@ export default function AdminApp() {
   const [notice, setNotice] = useState('');
   const key = moduleKey(active);
 
-  async function loadRecords() {
+  async function loadRecords(options: { skipBrowserCache?: boolean } = {}) {
     if (!token || active === 'Dashboard' || active === 'Site Settings') return;
+
+    const cacheKey = `portfolio-admin:${key}`;
+    if (!options.skipBrowserCache) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) setRecords(JSON.parse(cached) as AnyRecord[]);
+      } catch {
+        sessionStorage.removeItem(cacheKey);
+      }
+    }
+
     try {
       const result = await adminApi.list<AnyRecord>(key, token);
       const corrected = verifiedAdminRecords(key, result);
-      setRecords(
+      const visibleRecords =
         active === 'Resume'
           ? corrected.filter((item) => item.kind === 'resume')
-          : corrected,
-      );
+          : corrected;
+      setRecords(visibleRecords);
+      sessionStorage.setItem(cacheKey, JSON.stringify(visibleRecords));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to load content');
     }
@@ -235,6 +247,9 @@ export default function AdminApp() {
   function logout() {
     void adminApi.logout(token).catch(() => undefined);
     sessionStorage.removeItem('adminToken');
+    Object.keys(sessionStorage)
+      .filter((item) => item.startsWith('portfolio-admin:'))
+      .forEach((item) => sessionStorage.removeItem(item));
     setToken('');
   }
 
@@ -244,7 +259,8 @@ export default function AdminApp() {
       await adminApi.remove(key, String(deleteTarget.id), token);
       setDeleteTarget(null);
       setNotice('Deleted successfully');
-      await loadRecords();
+      sessionStorage.removeItem(`portfolio-admin:${key}`);
+      await loadRecords({ skipBrowserCache: true });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Delete failed');
     }
@@ -414,7 +430,8 @@ export default function AdminApp() {
           onSaved={async () => {
             setEditing(undefined);
             setNotice('Saved successfully');
-            await loadRecords();
+            sessionStorage.removeItem(`portfolio-admin:${key}`);
+            await loadRecords({ skipBrowserCache: true });
           }}
         />
       )}
