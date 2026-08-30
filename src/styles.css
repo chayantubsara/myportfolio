@@ -201,3 +201,65 @@ body{min-width:320px;overflow-x:hidden;line-height:1.5}
   .viewer footer{gap:8px;padding-inline:10px}
   .viewer footer button{padding-inline:6px}
 }
+
+
+/* Unified responsive document viewer for resume, certificates, awards and projects */
+.viewer{
+  width:min(1080px,calc(100vw - 32px));
+  height:min(920px,calc(100dvh - 32px));
+  min-width:0;
+  min-height:0;
+}
+.viewer header,.viewer footer{flex:0 0 auto;min-width:0}
+.viewer header>strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.viewer-actions{flex:0 0 auto}
+.canvas-wrap{
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  display:block;
+  padding:clamp(10px,2vw,20px);
+}
+.canvas-wrap canvas{
+  display:block;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  margin:0 auto;
+  background:#fff;
+  box-shadow:0 5px 25px #0003;
+}
+.viewer footer>span{white-space:nowrap;text-align:center}
+
+@media(max-width:700px){
+  .viewer{
+    width:100vw;
+    height:100dvh;
+    max-height:100dvh;
+    border-radius:0;
+  }
+  .viewer header{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    padding:8px 10px;
+  }
+  .viewer-actions{gap:0}
+  .viewer-actions button{min-width:42px;min-height:42px;padding:7px}
+  .canvas-wrap{padding:10px 6px}
+  .viewer footer{padding:8px 10px}
+  .viewer footer button{min-width:44px;min-height:44px}
+}
+
+@media(max-width:430px){
+  .viewer-actions button[aria-label="Fullscreen"]{display:none}
+  .viewer footer button{font-size:0;gap:0}
+  .viewer footer button svg{width:22px;height:22px}
+  .viewer footer>span{font-size:13px}
+}
