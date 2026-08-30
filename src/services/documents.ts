@@ -45,9 +45,11 @@ async function fetchAndCache(url: string) {
 
   if ('caches' in window) {
     const cache = await caches.open('portfolio-documents-v2');
+    const cacheBuffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(cacheBuffer).set(bytes);
     await cache.put(
       url,
-      new Response(bytes, {
+      new Response(cacheBuffer, {
         headers: { 'Content-Type': 'application/pdf' },
       }),
     );
