@@ -7,16 +7,10 @@ function decodeBase64(base64: string) {
 
 async function loadFromPersistentCache(url: string) {
   if (!('caches' in window)) return null;
-  const cache = await caches.open('portfolio-documents-v1');
+  const cache = await caches.open('portfolio-documents-v2');
   const cached = await cache.match(url);
   if (!cached) return null;
-
-  try {
-    return decodeBase64(await cached.text());
-  } catch {
-    await cache.delete(url);
-    return null;
-  }
+  return new Uint8Array(await cached.arrayBuffer());
 }
 
 async function fetchAndCache(url: string) {
@@ -24,28 +18,37 @@ async function fetchAndCache(url: string) {
   if (persistent) return persistent;
 
   const response = await fetch(url);
-  const body = (await response.text()).trim();
-  if (!response.ok || body.startsWith('Document not found')) {
-    throw new Error(
-      'The linked file is private, missing, or has an incorrect document ID.',
-    );
+  if (!response.ok) {
+    throw new Error('The document could not be downloaded.');
   }
 
+  const contentType = response.headers.get('content-type') ?? '';
   let bytes: Uint8Array;
-  try {
-    bytes = decodeBase64(body);
-  } catch {
-    throw new Error(
-      'The server did not return a valid PDF. Re-upload it from Admin.',
-    );
+
+  if (contentType.includes('application/pdf')) {
+    bytes = new Uint8Array(await response.clone().arrayBuffer());
+  } else {
+    const body = (await response.clone().text()).trim();
+    if (body.startsWith('Document not found')) {
+      throw new Error(
+        'The linked file is private, missing, or has an incorrect document ID.',
+      );
+    }
+    try {
+      bytes = decodeBase64(body);
+    } catch {
+      throw new Error(
+        'The server did not return a valid PDF. Check the public file path.',
+      );
+    }
   }
 
   if ('caches' in window) {
-    const cache = await caches.open('portfolio-documents-v1');
+    const cache = await caches.open('portfolio-documents-v2');
     await cache.put(
       url,
-      new Response(body, {
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      new Response(bytes, {
+        headers: { 'Content-Type': 'application/pdf' },
       }),
     );
   }
