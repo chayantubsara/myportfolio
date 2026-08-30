@@ -7,6 +7,7 @@ import {
   Code2,
   Download,
   ExternalLink,
+  FileText as FileTextIcon,
   GitBranch,
   GraduationCap,
   Mail,
@@ -74,6 +75,9 @@ export function PublicPortfolio({ route }: { route: string }) {
   const selectedProjectId = route.match(/^#\/projects\/(.+)$/)?.[1];
   const selectedProject = data.projects.find(
     (project) => project.id === selectedProjectId,
+  );
+  const selectedProjectDocument = data.documents.find(
+    (document) => document.id === selectedProject?.documentationId,
   );
   const resume = data.documents.find(
     (document) =>
@@ -427,7 +431,21 @@ export function PublicPortfolio({ route }: { route: string }) {
           </div>
         ))}
 
-      {selectedProject && <ProjectDetail project={selectedProject} />}
+      {selectedProject && (
+        <ProjectDetail
+          project={selectedProject}
+          documentName={selectedProjectDocument?.name}
+          onViewDocument={
+            selectedProjectDocument
+              ? () =>
+                  setViewer({
+                    url: documentUrl(selectedProjectDocument.id),
+                    title: selectedProjectDocument.name,
+                  })
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }
@@ -463,7 +481,15 @@ function ProjectCard({
   );
 }
 
-function ProjectDetail({ project }: { project: Project }) {
+function ProjectDetail({
+  project,
+  documentName,
+  onViewDocument,
+}: {
+  project: Project;
+  documentName?: string;
+  onViewDocument?: () => void;
+}) {
   return (
     <div className="modal-backdrop">
       <article className="project-detail" role="dialog" aria-modal="true">
@@ -491,6 +517,11 @@ function ProjectDetail({ project }: { project: Project }) {
             <dd>{project.role || 'More project details will be added.'}</dd>
           </div>
         </dl>
+        {onViewDocument && (
+          <button className="button secondary" onClick={onViewDocument}>
+            <FileTextIcon /> View {documentName || 'project PDF'}
+          </button>
+        )}
       </article>
     </div>
   );
