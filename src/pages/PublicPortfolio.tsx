@@ -137,7 +137,14 @@ export function PublicPortfolio({ route }: { route: string }) {
         data.documents
           .filter((document) => document.mimeType === 'application/pdf')
           .slice(0, 4)
-          .map((document) => documentUrl(document.id, document.updatedAt)),
+          .map((document) =>
+            documentUrl(
+              isStaticDocumentReference(document.driveFileId)
+                ? document.driveFileId
+                : document.id,
+              document.updatedAt,
+            ),
+          ),
       );
     }, 700);
 
