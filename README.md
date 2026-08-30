@@ -53,7 +53,7 @@ Before making a resume public, upload a reviewed/redacted PDF, then explicitly s
 
 ## GitHub Pages deployment
 
-1. Push this project to a repository named `chayon-network-portfolio`.
+1. Push this project to a repository named `myportfolio`.
 2. In repository **Settings > Pages**, select **GitHub Actions**.
 3. Add repository variables `VITE_GAS_API_URL` and `VITE_SITE_URL`.
 4. Push to `main` or run the workflow manually.
