@@ -59,15 +59,19 @@ async function fetchAndCache(url: string) {
 }
 
 export function loadDocumentBytes(url: string) {
-  const existing = memoryCache.get(url);
-  if (existing) return existing;
+  let source = memoryCache.get(url);
 
-  const request = fetchAndCache(url).catch((error) => {
-    memoryCache.delete(url);
-    throw error;
-  });
-  memoryCache.set(url, request);
-  return request;
+  if (!source) {
+    source = fetchAndCache(url).catch((error) => {
+      memoryCache.delete(url);
+      throw error;
+    });
+    memoryCache.set(url, source);
+  }
+
+  // PDF.js transfers its input buffer to a worker. Return a fresh copy so the
+  // cached source never becomes detached after the first viewer session.
+  return source.then((bytes) => bytes.slice());
 }
 
 export function prefetchDocuments(urls: string[]) {
