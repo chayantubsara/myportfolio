@@ -478,8 +478,6 @@ export function PublicPortfolio({ route }: { route: string }) {
         <section className="contact" id="contact">
           <div>
             <p className="section-number">06 · Contact</p>
-            <h2>Let’s build reliable systems.</h2>
-            <p>Open to Co-op, internship, and IT-related opportunities.</p>
           </div>
           <a className="button light" href={`mailto:${data.profile?.email}`}>
             <Mail /> {data.profile?.email}
