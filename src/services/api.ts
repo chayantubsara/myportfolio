@@ -62,6 +62,7 @@ function applyVerifiedCorrections(data: PortfolioData): PortfolioData {
   return {
     ...data,
     profile,
+    awards: data.awards ?? [],
     education: data.education.map((item) => ({
       ...item,
       institution:
