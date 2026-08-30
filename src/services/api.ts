@@ -2,6 +2,8 @@ import type { PortfolioData } from '../types/portfolio';
 import { fallbackData } from '../data/fallback';
 
 const API_URL = import.meta.env.VITE_GAS_API_URL?.trim();
+const PUBLIC_CACHE_KEY = 'portfolio-public-data-v2';
+const PUBLIC_CACHE_MS = 5 * 60 * 1000;
 
 async function callApi<T>(
   action: string,
@@ -32,8 +34,28 @@ function readFileAsBase64(file: File): Promise<string> {
 
 export async function getPortfolio(): Promise<PortfolioData> {
   try {
-    const data = await callApi<PortfolioData>('getPortfolio');
-    return applyVerifiedCorrections(data);
+    const cached = localStorage.getItem(PUBLIC_CACHE_KEY);
+    if (cached) {
+      const entry = JSON.parse(cached) as {
+        savedAt: number;
+        data: PortfolioData;
+      };
+      if (Date.now() - entry.savedAt < PUBLIC_CACHE_MS) {
+        return entry.data;
+      }
+    }
+  } catch {
+    localStorage.removeItem(PUBLIC_CACHE_KEY);
+  }
+
+  try {
+    const response = await callApi<PortfolioData>('getPortfolio');
+    const data = applyVerifiedCorrections(response);
+    localStorage.setItem(
+      PUBLIC_CACHE_KEY,
+      JSON.stringify({ savedAt: Date.now(), data }),
+    );
+    return data;
   } catch {
     return fallbackData;
   }
@@ -90,10 +112,16 @@ export const adminApi = {
   dashboard: (token: string) => callApi('getDashboard', {}, token),
   list: <T>(module: string, token: string) =>
     callApi<T[]>('adminList', { module }, token),
-  save: <T>(module: string, record: T, token: string) =>
-    callApi<T>('adminSave', { module, record }, token),
-  remove: (module: string, id: string, token: string) =>
-    callApi('adminDelete', { module, id }, token),
+  save: async <T>(module: string, record: T, token: string) => {
+    const saved = await callApi<T>('adminSave', { module, record }, token);
+    localStorage.removeItem(PUBLIC_CACHE_KEY);
+    return saved;
+  },
+  remove: async (module: string, id: string, token: string) => {
+    const result = await callApi('adminDelete', { module, id }, token);
+    localStorage.removeItem(PUBLIC_CACHE_KEY);
+    return result;
+  },
   changePassword: (currentPassword: string, newPassword: string, token: string) =>
     callApi('changePassword', { currentPassword, newPassword }, token),
   uploadDocument: async (file: File, kind: string, token: string) => {
