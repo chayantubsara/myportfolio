@@ -612,6 +612,24 @@ function EditDrawer({
           token,
         );
         payload.documentId = uploaded.id;
+      } else if (module === 'Certifications' && payload.documentId) {
+        const documents = await adminApi.list<AnyRecord>('documents', token);
+        const linkedDocument = documents.find(
+          (document) => document.id === payload.documentId,
+        );
+        if (linkedDocument) {
+          const publishDocument =
+            record.publicDocument === true || record.publicDocument === 'true';
+          await adminApi.save(
+            'documents',
+            {
+              ...linkedDocument,
+              visibility: publishDocument ? 'public' : 'private',
+              publicDocument: publishDocument,
+            },
+            token,
+          );
+        }
       }
 
       delete payload.profileImage;
