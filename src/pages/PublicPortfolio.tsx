@@ -20,6 +20,10 @@ import {
 } from 'lucide-react';
 import { fallbackData } from '../data/fallback';
 import { getPortfolio } from '../services/api';
+import {
+  downloadDocument,
+  prefetchDocuments,
+} from '../services/documents';
 import type { PortfolioData, Project } from '../types/portfolio';
 
 const PdfViewer = lazy(() =>
@@ -60,6 +64,31 @@ export function PublicPortfolio({ route }: { route: string }) {
     localStorage.theme = isDark ? 'dark' : 'light';
   }, [isDark]);
 
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [route]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    };
+    const closeOnDesktop = () => {
+      if (window.innerWidth > 850) setIsMenuOpen(false);
+    };
+
+    document.body.classList.add('menu-open');
+    window.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', closeOnDesktop);
+
+    return () => {
+      document.body.classList.remove('menu-open');
+      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('resize', closeOnDesktop);
+    };
+  }, [isMenuOpen]);
+
   const groupedSkills = useMemo(
     () =>
       data.skills.reduce<Record<string, typeof data.skills>>(
@@ -96,8 +125,36 @@ export function PublicPortfolio({ route }: { route: string }) {
       String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
     )[0];
 
+  useEffect(() => {
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean } }
+    ).connection;
+    if (connection?.saveData) return;
+
+    const timer = window.setTimeout(() => {
+      void import('../components/PdfViewer');
+      prefetchDocuments(
+        data.documents
+          .filter((document) => document.mimeType === 'application/pdf')
+          .slice(0, 4)
+          .map((document) => documentUrl(document.id, document.updatedAt)),
+      );
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [data.documents]);
+
   function closeMenu() {
     setIsMenuOpen(false);
+  }
+
+  function openPublicDocument(documentId: string, title: string) {
+    const document = data.documents.find((item) => item.id === documentId);
+    if (!document) return;
+    setViewer({
+      url: documentUrl(document.id, document.updatedAt),
+      title,
+    });
   }
 
   function openResume() {
@@ -105,30 +162,15 @@ export function PublicPortfolio({ route }: { route: string }) {
       setViewer({ url: '', title: 'Resume' });
       return;
     }
-
-    setViewer({
-      url: documentUrl(resume.id),
-      title: resume.name,
-    });
+    openPublicDocument(resume.id, resume.name);
   }
 
   async function downloadResume() {
     if (!resume) return;
-
-    const base64 = await fetch(documentUrl(resume.id)).then((response) =>
-      response.text(),
+    await downloadDocument(
+      documentUrl(resume.id, resume.updatedAt),
+      'Chayan-Tubsara-Resume.pdf',
     );
-    const bytes = Uint8Array.from(atob(base64.trim()), (character) =>
-      character.charCodeAt(0),
-    );
-    const href = URL.createObjectURL(
-      new Blob([bytes], { type: 'application/pdf' }),
-    );
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = 'Chayan-Tubsara-Resume.pdf';
-    link.click();
-    URL.revokeObjectURL(href);
   }
 
   return (
@@ -329,7 +371,13 @@ export function PublicPortfolio({ route }: { route: string }) {
                     className="button secondary"
                     onClick={() =>
                       setViewer({
-                        url: documentUrl(certification.documentId),
+                        url: documentUrl(
+                          certification.documentId,
+                          data.documents.find(
+                            (document) =>
+                              document.id === certification.documentId,
+                          )?.updatedAt,
+                        ),
                         title: certification.name,
                       })
                     }
@@ -361,7 +409,12 @@ export function PublicPortfolio({ route }: { route: string }) {
                     className="button secondary"
                     onClick={() =>
                       setViewer({
-                        url: documentUrl(award.documentId),
+                        url: documentUrl(
+                          award.documentId,
+                          data.documents.find(
+                            (document) => document.id === award.documentId,
+                          )?.updatedAt,
+                        ),
                         title: award.name,
                       })
                     }
@@ -471,7 +524,10 @@ export function PublicPortfolio({ route }: { route: string }) {
             selectedProjectDocument
               ? () =>
                   setViewer({
-                    url: documentUrl(selectedProjectDocument.id),
+                    url: documentUrl(
+                      selectedProjectDocument.id,
+                      selectedProjectDocument.updatedAt,
+                    ),
                     title: selectedProjectDocument.name,
                   })
               : undefined
@@ -482,12 +538,13 @@ export function PublicPortfolio({ route }: { route: string }) {
   );
 }
 
-function documentUrl(documentId: string) {
-  return (
-    String(import.meta.env.VITE_GAS_API_URL) +
-    '?action=document&id=' +
-    encodeURIComponent(documentId)
-  );
+function documentUrl(documentId: string, version = '') {
+  const params = new URLSearchParams({
+    action: 'document',
+    id: documentId,
+  });
+  if (version) params.set('v', version);
+  return `${String(import.meta.env.VITE_GAS_API_URL)}?${params.toString()}`;
 }
 
 function ProjectCard({
