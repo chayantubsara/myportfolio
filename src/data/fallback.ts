@@ -112,6 +112,7 @@ export const fallbackData: PortfolioData = {
       credentialUrl: '',
       documentId: '',
       description: '',
+      skills: [],
       publicDocument: false,
       featured: true,
     },
