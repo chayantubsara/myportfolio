@@ -32,11 +32,55 @@ function readFileAsBase64(file: File): Promise<string> {
 
 export async function getPortfolio(): Promise<PortfolioData> {
   try {
-    return await callApi<PortfolioData>('getPortfolio');
+    const data = await callApi<PortfolioData>('getPortfolio');
+    return applyVerifiedCorrections(data);
   } catch {
     return fallbackData;
   }
 }
+
+function applyVerifiedCorrections(data: PortfolioData): PortfolioData {
+  const profile = data.profile
+    ? {
+        ...data.profile,
+        name:
+          data.profile.name === 'Mr. Chayon Tubsoro'
+            ? 'Mr. Chayan Tubsara'
+            : data.profile.name,
+        introduction:
+          data.profile.introduction ===
+          'Motivated and detail-oriented Network Engineering student with hands-on internship experience in network deployment and maintenance.'
+            ? fallbackData.profile!.introduction
+            : data.profile.introduction,
+        about:
+          data.profile.about.startsWith('Certified in MTCNA')
+            ? fallbackData.profile!.about
+            : data.profile.about,
+      }
+    : fallbackData.profile;
+
+  return {
+    ...data,
+    profile,
+    education: data.education.map((item) => ({
+      ...item,
+      institution:
+        item.institution === 'Hatyaiwittayalai Somboonkulkanya School'
+          ? 'Hatyaiwittayalai Somboon Kulkanya School'
+          : item.institution,
+    })),
+    experience: data.experience.map((item) => ({
+      ...item,
+      company:
+        item.company === 'Piromid Solutions, Koh Samui'
+          ? 'Piramid Solutions, Koh Samui'
+          : item.company,
+      startDate: item.startDate === '2022-05' ? 'May 2022' : item.startDate,
+      endDate: item.endDate === '2022-09' ? 'Sep 2022' : item.endDate,
+    })),
+  };
+}
+
 
 export const adminApi = {
   login: (username: string, password: string) =>
