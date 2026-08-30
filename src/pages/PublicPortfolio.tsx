@@ -255,7 +255,16 @@ export function PublicPortfolio({ route }: { route: string }) {
 
         <nav aria-label="Primary navigation">
           {navigation.map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`}>
+            <a
+              key={item}
+              href={`#${item.toLowerCase()}`}
+              className={
+                activeSection === item.toLowerCase() ? 'active' : undefined
+              }
+              aria-current={
+                activeSection === item.toLowerCase() ? 'location' : undefined
+              }
+            >
               {item}
             </a>
           ))}
@@ -291,6 +300,14 @@ export function PublicPortfolio({ route }: { route: string }) {
                 key={item}
                 href={`#${item.toLowerCase()}`}
                 onClick={closeMenu}
+                className={
+                  activeSection === item.toLowerCase() ? 'active' : undefined
+                }
+                aria-current={
+                  activeSection === item.toLowerCase()
+                    ? 'location'
+                    : undefined
+                }
               >
                 {item}
               </a>
